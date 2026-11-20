@@ -301,9 +301,8 @@
     let voices = [];
     let activeIndex = -1;
     let isPlayingAll = false;
-    let playAllTimer = null;
-    let speakTimer = null;
-    let activeUtterance = null;
+    let activeQueue = [];
+    let playbackGen = 0;
 
     const synth = typeof window !== "undefined" ? window.speechSynthesis : null;
     const gridEl = document.getElementById("word-grid");
@@ -352,12 +351,17 @@
         : ["daniel", "serena", "martha", "kate", "google uk english female", "google uk english male", "sonia"];
 
       const langMatches = voices.filter(v => (v.lang || "").toLowerCase().replace("_", "-") === norm);
+      const localMatches = langMatches.filter(v => v.localService);
+      const pool = localMatches.length ? localMatches : langMatches;
+
       for (const name of preferredNames) {
-        const hit = langMatches.find(v => v.name.toLowerCase().includes(name));
+        const hit = pool.find(v => v.name.toLowerCase().includes(name));
         if (hit) return hit;
       }
-      if (langMatches.length) return langMatches[0];
-      return voices.find(v => (v.lang || "").toLowerCase().startsWith("en")) || null;
+      if (pool.length) return pool[0];
+      return voices.find(v => (v.lang || "").toLowerCase().startsWith("en") && v.localService)
+        || voices.find(v => (v.lang || "").toLowerCase().startsWith("en"))
+        || null;
     }
 
     function updatePlayAllUI() {
@@ -378,18 +382,28 @@
       });
     }
 
+    function createUtterance(item) {
+      const u = new SpeechSynthesisUtterance(item.word);
+      u.lang = accent;
+      u.rate = rate;
+      const voice = pickVoice(accent);
+      if (voice) u.voice = voice;
+      return u;
+    }
+
     function stopAll() {
+      playbackGen++;
       isPlayingAll = false;
-      clearTimeout(playAllTimer);
-      clearTimeout(speakTimer);
-      if (synth) synth.cancel();
-      activeUtterance = null;
+      activeQueue = [];
+      if (synth && (synth.speaking || synth.pending)) {
+        synth.cancel();
+      }
       highlightCard(-1);
       updatePlayAllUI();
       statusEl.textContent = defaultStatus();
     }
 
-    function speakIndex(index, onComplete) {
+    function speakSingle(index) {
       if (!synth) {
         warningEl.classList.add("visible");
         return;
@@ -397,51 +411,77 @@
       const item = WORDS[index];
       if (!item) return;
 
-      clearTimeout(speakTimer);
-      synth.cancel();
+      const gen = ++playbackGen;
+      isPlayingAll = false;
+      updatePlayAllUI();
+
+      if (synth.speaking || synth.pending) {
+        synth.cancel();
+      }
+      if (synth.paused) {
+        synth.resume();
+      }
+
+      const u = createUtterance(item);
+      activeQueue = [u];
       highlightCard(index);
       statusEl.textContent = `正在朗读：${item.word}`;
 
-      speakTimer = setTimeout(() => {
-        const u = new SpeechSynthesisUtterance(item.word);
-        u.lang = accent;
-        u.rate = rate;
-        const voice = pickVoice(accent);
-        if (voice) u.voice = voice;
+      u.onend = () => {
+        if (gen !== playbackGen) return;
+        activeQueue = [];
+        highlightCard(-1);
+        statusEl.textContent = defaultStatus();
+      };
+      u.onerror = () => {
+        if (gen !== playbackGen) return;
+        activeQueue = [];
+        highlightCard(-1);
+        statusEl.textContent = defaultStatus();
+      };
 
-        activeUtterance = u;
-        u.onend = () => {
-          if (activeUtterance !== u) return;
-          activeUtterance = null;
-          if (onComplete) {
-            onComplete();
-          } else {
-            highlightCard(-1);
-            statusEl.textContent = defaultStatus();
-          }
-        };
-        u.onerror = () => {
-          if (activeUtterance !== u) return;
-          activeUtterance = null;
-          if (onComplete && isPlayingAll) {
-            onComplete();
-          } else {
-            highlightCard(-1);
-          }
-        };
-        synth.speak(u);
-      }, 25);
+      // Must run synchronously inside user click handler for iOS Safari / WKWebView
+      synth.speak(u);
     }
 
-    function playSequence(idx) {
-      if (!isPlayingAll || idx >= WORDS.length) {
-        stopAll();
+    function startPlayAll() {
+      if (!synth) {
+        warningEl.classList.add("visible");
         return;
       }
-      speakIndex(idx, () => {
-        if (!isPlayingAll) return;
-        playAllTimer = setTimeout(() => playSequence(idx + 1), 320);
+      const gen = ++playbackGen;
+      isPlayingAll = true;
+      updatePlayAllUI();
+
+      if (synth.speaking || synth.pending) {
+        synth.cancel();
+      }
+      if (synth.paused) {
+        synth.resume();
+      }
+
+      activeQueue = WORDS.map((item, idx) => {
+        const u = createUtterance(item);
+        u.onstart = () => {
+          if (gen !== playbackGen) return;
+          highlightCard(idx);
+          statusEl.textContent = `正在朗读（${idx + 1}/${WORDS.length}）：${item.word}`;
+        };
+        if (idx === WORDS.length - 1) {
+          u.onend = () => {
+            if (gen !== playbackGen) return;
+            stopAll();
+          };
+          u.onerror = () => {
+            if (gen !== playbackGen) return;
+            stopAll();
+          };
+        }
+        return u;
       });
+
+      // Queue synchronously inside click handler so iOS Safari allows sequential playback
+      activeQueue.forEach((u) => synth.speak(u));
     }
 
     function renderGrid() {
@@ -470,13 +510,7 @@
 
       gridEl.querySelectorAll("button[data-idx]").forEach((btn) => {
         btn.addEventListener("click", () => {
-          const idx = Number(btn.dataset.idx);
-          if (isPlayingAll) {
-            isPlayingAll = false;
-            clearTimeout(playAllTimer);
-            updatePlayAllUI();
-          }
-          speakIndex(idx);
+          speakSingle(Number(btn.dataset.idx));
         });
       });
 
@@ -513,9 +547,7 @@
       if (isPlayingAll) {
         stopAll();
       } else {
-        isPlayingAll = true;
-        updatePlayAllUI();
-        playSequence(0);
+        startPlayAll();
       }
     });
 

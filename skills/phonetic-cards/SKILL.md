@@ -35,4 +35,4 @@ Generate a clean, single-file, zero-dependency HTML page that displays English w
 ## Requirements
 
 - Keep the output strictly single-file and offline-ready: no external CSS/JS CDNs and no third-party audio URLs.
-- Preserve the Web Speech API reliability safeguards in `resources/template.html` (`onvoiceschanged`, `cancel()` + short delay before `speak()`, and retaining the active `SpeechSynthesisUtterance` reference).
+- Preserve the Web Speech API reliability safeguards in `resources/template.html` (`onvoiceschanged`, calling `speechSynthesis.speak()` synchronously inside the user click handler for iOS Safari / WKWebView compatibility, and retaining active `SpeechSynthesisUtterance` references).
