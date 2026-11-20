@@ -22,7 +22,7 @@ Generate a clean, single-file, zero-dependency HTML page that displays English w
 2. **Populate the HTML template**:
    - Read [resources/template.html](./resources/template.html).
    - Replace the `__WORDS_JSON__` placeholder with the JSON array from Step 1.
-   - Pick a clean, URL-safe filename (e.g. `<topic-slug>.html` or `phonetic-list.html`).
+   - Pick a collision-proof, URL-safe filename using `YYYYMMDD-HHMM-<topic-slug>.html` (e.g. `20261120-2038-religion-ethics.html`), unless the user explicitly specifies a filename. Before saving or uploading, if a file with the same name already exists at the destination, append a numeric or short random suffix so existing cards are never overwritten.
 
 3. **Deliver locally or in preview**:
    - **Coding / CLI agents** (Claude Code, Codex, Cursor, Gemini CLI, etc.): save the populated HTML locally (e.g. `./cards/<filename>` or `./phonetic-list.html`, or the path requested by the user).
