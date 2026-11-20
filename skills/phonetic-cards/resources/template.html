@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>单词音标与点击发音清单</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --card-hover: #f1f5f9;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --muted: #64748b;
+      --primary: #2563eb;
+      --primary-fg: #ffffff;
+      --primary-ring: rgba(37, 99, 235, 0.25);
+      --warning: #b45309;
+      --warning-bg: #fffbeb;
+      --warning-border: #fde68a;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f172a;
+        --card: #1e293b;
+        --card-hover: #263449;
+        --border: #334155;
+        --text: #f1f5f9;
+        --muted: #94a3b8;
+        --primary: #60a5fa;
+        --primary-fg: #0f172a;
+        --primary-ring: rgba(96, 165, 250, 0.28);
+        --warning: #fbbf24;
+        --warning-bg: rgba(251, 191, 36, 0.1);
+        --warning-border: rgba(251, 191, 36, 0.35);
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px 16px 32px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding-bottom: 12px;
+      margin-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+    }
+
+    .controls-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .segmented {
+      display: inline-flex;
+      padding: 2px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--card);
+    }
+
+    .seg-btn {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .seg-btn:hover {
+      color: var(--text);
+    }
+
+    .seg-btn.active {
+      background: var(--primary);
+      color: var(--primary-fg);
+    }
+
+    .status {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .play-all-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 11px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .play-all-btn:hover {
+      border-color: var(--primary);
+      background: var(--card-hover);
+    }
+
+    .play-all-btn svg {
+      width: 14px;
+      height: 14px;
+      color: var(--primary);
+    }
+
+    .warning {
+      display: none;
+      margin-bottom: 12px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--warning-border);
+      background: var(--warning-bg);
+      color: var(--warning);
+      font-size: 12px;
+    }
+
+    .warning.visible {
+      display: block;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(1, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    @media (min-width: 480px) {
+      .grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (min-width: 760px) {
+      .grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    .card {
+      width: 100%;
+      text-align: left;
+      padding: 9px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      cursor: pointer;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+      font: inherit;
+    }
+
+    .card:hover {
+      border-color: var(--primary);
+      background: var(--card-hover);
+    }
+
+    .card:focus-visible {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-ring);
+    }
+
+    .card.speaking {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px var(--primary-ring);
+    }
+
+    .card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    .word-line {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .word {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.35;
+      flex-shrink: 0;
+    }
+
+    .zh {
+      font-size: 12px;
+      color: var(--muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .speaker {
+      width: 15px;
+      height: 15px;
+      flex-shrink: 0;
+      color: var(--muted);
+      transition: color 0.15s ease;
+    }
+
+    .card:hover .speaker,
+    .card.speaking .speaker {
+      color: var(--primary);
+    }
+
+    .card.speaking .speaker {
+      animation: pulse-wave 0.75s ease-in-out infinite;
+    }
+
+    .ipa {
+      margin-top: 3px;
+      font-size: 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      color: var(--primary);
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    @keyframes pulse-wave {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.18); opacity: 0.7; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="toolbar">
+      <div class="controls-group">
+        <div class="segmented" role="group" aria-label="口音切换">
+          <button id="btn-us" type="button" class="seg-btn active">美音 US</button>
+          <button id="btn-uk" type="button" class="seg-btn">英音 UK</button>
+        </div>
+
+        <div class="segmented" role="group" aria-label="语速切换">
+          <button id="btn-rate-1" type="button" class="seg-btn active">1.0x</button>
+          <button id="btn-rate-slow" type="button" class="seg-btn">0.75x 慢速</button>
+        </div>
+      </div>
+
+      <div class="controls-group">
+        <span id="status-text" class="status"></span>
+        <button id="btn-play-all" type="button" class="play-all-btn">
+          <svg id="play-all-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M8 5.14v14l11-7-11-7z"/>
+          </svg>
+          <span id="play-all-label">全部连读</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="tts-warning" class="warning">
+      当前浏览器不支持语音合成（Web Speech API），建议使用 Chrome、Safari 或 Edge 打开此页面。
+    </div>
+
+    <div id="word-grid" class="grid"></div>
+  </div>
+
+  <script>
+    const WORDS = __WORDS_JSON__;
+
+    let accent = "en-US";
+    let rate = 1.0;
+    let voices = [];
+    let activeIndex = -1;
+    let isPlayingAll = false;
+    let playAllTimer = null;
+    let speakTimer = null;
+    let activeUtterance = null;
+
+    const synth = typeof window !== "undefined" ? window.speechSynthesis : null;
+    const gridEl = document.getElementById("word-grid");
+    const statusEl = document.getElementById("status-text");
+    const warningEl = document.getElementById("tts-warning");
+    const btnUS = document.getElementById("btn-us");
+    const btnUK = document.getElementById("btn-uk");
+    const btnRate1 = document.getElementById("btn-rate-1");
+    const btnRateSlow = document.getElementById("btn-rate-slow");
+    const btnPlayAll = document.getElementById("btn-play-all");
+    const playAllLabel = document.getElementById("play-all-label");
+    const playAllIcon = document.getElementById("play-all-icon");
+
+    const defaultStatus = () => `点击任意卡片即可发音 · ${WORDS.length} 词`;
+
+    function escapeHtml(str) {
+      return String(str ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    statusEl.textContent = defaultStatus();
+
+    if (!synth) {
+      warningEl.classList.add("visible");
+    } else {
+      const loadVoices = () => {
+        voices = synth.getVoices() || [];
+      };
+      loadVoices();
+      if ("onvoiceschanged" in synth) {
+        synth.onvoiceschanged = loadVoices;
+      }
+    }
+
+    function pickVoice(targetLang) {
+      if (!voices.length && synth) {
+        voices = synth.getVoices() || [];
+      }
+      const norm = targetLang.toLowerCase();
+      const preferredNames = norm === "en-us"
+        ? ["samantha", "alex", "ava", "allison", "google us english", "aria", "jenny"]
+        : ["daniel", "serena", "martha", "kate", "google uk english female", "google uk english male", "sonia"];
+
+      const langMatches = voices.filter(v => (v.lang || "").toLowerCase().replace("_", "-") === norm);
+      for (const name of preferredNames) {
+        const hit = langMatches.find(v => v.name.toLowerCase().includes(name));
+        if (hit) return hit;
+      }
+      if (langMatches.length) return langMatches[0];
+      return voices.find(v => (v.lang || "").toLowerCase().startsWith("en")) || null;
+    }
+
+    function updatePlayAllUI() {
+      if (isPlayingAll) {
+        playAllLabel.textContent = "停止";
+        playAllIcon.innerHTML = '<rect x="6" y="6" width="12" height="12" rx="1.5"/>';
+      } else {
+        playAllLabel.textContent = "全部连读";
+        playAllIcon.innerHTML = '<path d="M8 5.14v14l11-7-11-7z"/>';
+      }
+    }
+
+    function highlightCard(index) {
+      activeIndex = index;
+      gridEl.querySelectorAll("button[data-idx]").forEach((card) => {
+        const idx = Number(card.dataset.idx);
+        card.classList.toggle("speaking", idx === activeIndex);
+      });
+    }
+
+    function stopAll() {
+      isPlayingAll = false;
+      clearTimeout(playAllTimer);
+      clearTimeout(speakTimer);
+      if (synth) synth.cancel();
+      activeUtterance = null;
+      highlightCard(-1);
+      updatePlayAllUI();
+      statusEl.textContent = defaultStatus();
+    }
+
+    function speakIndex(index, onComplete) {
+      if (!synth) {
+        warningEl.classList.add("visible");
+        return;
+      }
+      const item = WORDS[index];
+      if (!item) return;
+
+      clearTimeout(speakTimer);
+      synth.cancel();
+      highlightCard(index);
+      statusEl.textContent = `正在朗读：${item.word}`;
+
+      speakTimer = setTimeout(() => {
+        const u = new SpeechSynthesisUtterance(item.word);
+        u.lang = accent;
+        u.rate = rate;
+        const voice = pickVoice(accent);
+        if (voice) u.voice = voice;
+
+        activeUtterance = u;
+        u.onend = () => {
+          if (activeUtterance !== u) return;
+          activeUtterance = null;
+          if (onComplete) {
+            onComplete();
+          } else {
+            highlightCard(-1);
+            statusEl.textContent = defaultStatus();
+          }
+        };
+        u.onerror = () => {
+          if (activeUtterance !== u) return;
+          activeUtterance = null;
+          if (onComplete && isPlayingAll) {
+            onComplete();
+          } else {
+            highlightCard(-1);
+          }
+        };
+        synth.speak(u);
+      }, 25);
+    }
+
+    function playSequence(idx) {
+      if (!isPlayingAll || idx >= WORDS.length) {
+        stopAll();
+        return;
+      }
+      speakIndex(idx, () => {
+        if (!isPlayingAll) return;
+        playAllTimer = setTimeout(() => playSequence(idx + 1), 320);
+      });
+    }
+
+    function renderGrid() {
+      const ipaKey = accent === "en-US" ? "us" : "uk";
+      gridEl.innerHTML = WORDS.map((item, idx) => `
+        <button
+          type="button"
+          class="card"
+          data-idx="${idx}"
+          title="${escapeHtml(item.word)} (${escapeHtml(item.zh)}) — 点击发音"
+        >
+          <div class="card-top">
+            <div class="word-line">
+              <span class="word">${escapeHtml(item.word)}</span>
+              <span class="zh">${escapeHtml(item.zh)}</span>
+            </div>
+            <svg class="speaker" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none"></polygon>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+            </svg>
+          </div>
+          <div class="ipa">${escapeHtml(item[ipaKey])}</div>
+        </button>
+      `).join("");
+
+      gridEl.querySelectorAll("button[data-idx]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const idx = Number(btn.dataset.idx);
+          if (isPlayingAll) {
+            isPlayingAll = false;
+            clearTimeout(playAllTimer);
+            updatePlayAllUI();
+          }
+          speakIndex(idx);
+        });
+      });
+
+      if (activeIndex >= 0) highlightCard(activeIndex);
+    }
+
+    btnUS.addEventListener("click", () => {
+      accent = "en-US";
+      btnUS.classList.add("active");
+      btnUK.classList.remove("active");
+      renderGrid();
+    });
+
+    btnUK.addEventListener("click", () => {
+      accent = "en-GB";
+      btnUK.classList.add("active");
+      btnUS.classList.remove("active");
+      renderGrid();
+    });
+
+    btnRate1.addEventListener("click", () => {
+      rate = 1.0;
+      btnRate1.classList.add("active");
+      btnRateSlow.classList.remove("active");
+    });
+
+    btnRateSlow.addEventListener("click", () => {
+      rate = 0.75;
+      btnRateSlow.classList.add("active");
+      btnRate1.classList.remove("active");
+    });
+
+    btnPlayAll.addEventListener("click", () => {
+      if (isPlayingAll) {
+        stopAll();
+      } else {
+        isPlayingAll = true;
+        updatePlayAllUI();
+        playSequence(0);
+      }
+    });
+
+    renderGrid();
+  </script>
+</body>
+</html>
