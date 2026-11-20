@@ -11,7 +11,7 @@
   - 支持可选**自动推送到云端**（由 Agent 询问你偏好的方式，如自有服务器 SSH/SCP、GitHub Pages 等，配置仅存于本机 `~/.config/phonetic-cards/deploy.json`，零隐私硬编码）并自动生成可直接粘贴的 Obsidian 单行 `<iframe>` 嵌入代码。
 
 - **`skills/bsu-ppt-master`**：将讲话稿、发言稿或课程资料（支持 `.md`、`.docx` 或纯文本）基于白俄罗斯国立大学（BSU）官方原生模板生成可编辑 PPTX：
-  - **自包含内置模板**：内置 `resources/PPT模板3.pptx`（默认主模板，含 19 种原生版式、通用图标库及 BSU 各学院信息图）及 `PPT模板1.pptx`、`PPT模板2.pptx`（样式与素材补充），零本机路径依赖；
+  - **自包含内置模板**：默认使用 `resources/PPT模板3.pptx`（2 页示例、11 种原生版式）作为主模板，并以 `PPT模板1.pptx`（23 页示例、19 种原生版式，含通用图标库及 BSU 各学院信息图）与 `PPT模板2.pptx`（2 页示例、11 种原生版式）作为样式与素材补充，零本机路径依赖；
   - **固定制作约束**：强制走 `Edit Native PPTX` 在原生模板副本中编辑、保留母版与视觉体系、禁止出现 `Source` 标注、版式丰富美观并输出到当前项目 `exports/` 目录；
   - **前置依赖**：依赖 [**`ppt-master`**](https://github.com/hugohe3/ppt-master)（`npx skills add hugohe3/ppt-master`）。安装或首次使用时，Agent 会自动检查当前环境是否已安装 `ppt-master`——若本机其他 Agent 目录已有副本，会先询问是否软链接；若尚未安装，会先询问是否协助安装；
   - **可选环境能力**：如宿主环境提供 `office` / `office-pptx` 等专用 Office 技能（如 DSH）会按需配合调用；否则自动使用 `ppt-master` 自带脚本及本地 Python / LibreOffice 工具链完成读写与渲染检查。
