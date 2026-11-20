@@ -4,7 +4,10 @@
 
 ## Skills 列表
 
-- **`skills/phonetic-cards`**：将任意英文单词/人名列表生成单文件、离线可用、一点就读的音标卡片页面（支持美音/英音、0.75x 慢速、全部连读）。
+- **`skills/phonetic-cards`**：将任意英文单词/人名列表生成单文件、离线可用、一点就读的音标卡片页面：
+  - 支持美音/英音 IPA 与朗读同步切换、0.75x 慢速、顺序全部连读；
+  - 兼容桌面端及 iOS Safari / Obsidian / Alook；
+  - 支持可选**自动推送到云端**（由 Agent 询问你偏好的方式，如自有服务器 SSH/SCP、GitHub Pages 等，配置仅存于本机 `~/.config/phonetic-cards/deploy.json`，零隐私硬编码）并自动生成可直接粘贴的 Obsidian 单行 `<iframe>` 嵌入代码。
 
 ## 一句话让任意 Agent 安装
 
